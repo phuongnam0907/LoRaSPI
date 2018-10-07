@@ -250,7 +250,6 @@ public class MainActivity extends Activity {
         dataSend[0] = (byte) (reg & ~RegisterValue.RH_SPI_WRITE_MASK);
         dataSend[1] = 0;
         mDevice.transfer(dataSend,response,dataSend.length);
-        //mDevice.read(response,response.length);
         mGpio.setValue(false);
         for(int i = 0; i< 10; i++) {
             Log.d(TAG, "Response byte " + Integer.toHexString(i) + " is: " + Integer.toHexString(response[i]));
