@@ -134,7 +134,7 @@ public class RegisterValue {
     public static final byte RH_RF95_SPREADING_FACTOR_1024CPS            = (byte) 0xa0;
     public static final byte RH_RF95_SPREADING_FACTOR_2048CPS            = (byte) 0xb0;
     public static final byte RH_RF95_SPREADING_FACTOR_4096CPS            = (byte) 0xc0;
-    public static final byte RH_RF95_TX_CONTINUOUS_MOE                   = (byte) 0x08;
+    public static final byte RH_RF95_TX_CONTINUOUS_MODE                   = (byte) 0x08;
     public static final byte RH_RF95_AGC_AUTO_ON                         = (byte) 0x04;
     public static final byte RH_RF95_SYM_TIMEOUT_MSB                     = (byte) 0x03;
 
