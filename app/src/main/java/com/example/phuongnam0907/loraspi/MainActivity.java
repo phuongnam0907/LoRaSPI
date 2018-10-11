@@ -68,11 +68,11 @@ public class MainActivity extends Activity {
 
             mGpio.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW);
 
-            mDevice = manager.openSpiDevice("SPI0.0");
+            mDevice = manager.openSpiDevice("SPI0.1");
             Log.d(TAG,"Name: " + mDevice.getName());
             configSPIDevice(mDevice);
 
-            sendConfig();
+            //sendConfig();
             setup();
             setup_Timer();
             //spiRead(RegisterAddress.RH_RF95_REG_1F_SYMB_TIMEOUT_LSB);
@@ -107,8 +107,8 @@ public class MainActivity extends Activity {
     }
 
     private void configSPIDevice(SpiDevice device) throws IOException {
-        device.setMode(SpiDevice.MODE0);
-        device.setFrequency(12000000); //1MHz
+        device.setMode(SpiDevice.MODE1);
+        device.setFrequency(32000000); //12MHz OR 32MHz
         device.setBitJustification(SpiDevice.BIT_JUSTIFICATION_MSB_FIRST);
         device.setBitsPerWord(8);
         Log.d(TAG,"SPI OK now ....");
@@ -136,16 +136,16 @@ public class MainActivity extends Activity {
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
+                //sendConfig();
                 try {
                     spiRead(mDevice, RegisterAddress.RH_RF95_REG_00_FIFO);
-                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_01_OP_MODE);
-                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_09_PA_CONFIG);
-                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_1F_SYMB_TIMEOUT_LSB);
-                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_0E_FIFO_TX_BASE_ADDR);
-                    spiRead(mDevice, (byte) 0x26);
-                    spiRead(mDevice, (byte) 0x06);
-                    spiRead(mDevice, (byte) 0x07);
-                    spiRead(mDevice, (byte) 0x09);
+                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_0D_FIFO_ADDR_PTR);
+                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_06_FRF_MSB);
+                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_07_FRF_MID);
+                    spiRead(mDevice, RegisterAddress.RH_RF95_REG_08_FRF_LSB);
+                    //spiWrite(mDevice,RegisterAddress.RH_RF95_REG_00_FIFO,(byte) 0x01);
+                    //spiRead(mDevice, RegisterAddress.RH_RF95_REG_0D_FIFO_ADDR_PTR);
+                    //spiRead(mDevice, RegisterAddress.RH_RF95_REG_0D_FIFO_ADDR_PTR);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -174,7 +174,7 @@ public class MainActivity extends Activity {
         try {
             byte[] test_data = new byte[39]; //Totally, 4 bytes are sent by the master
             test_data[0] = (byte)(0x00); //0x00 //FIFO
-            test_data[1] = (byte)(0x88); //0x01 //Use LoRa mode + Sleep mode
+            test_data[1] = (byte)(0x8b); //0x01 //Use LoRa mode + Sleep mode
             test_data[2] = (byte)(0x00); //0x02 **RESERVED**
             test_data[3] = (byte)(0x00); //0x03 **RESERVED**
             test_data[4] = (byte)(0x00); //0x04 **RESERVED**
@@ -251,10 +251,12 @@ public class MainActivity extends Activity {
         byte[] response = new byte[2];
         byte[] dataSend = new byte[2];
         dataSend[0] = (byte) (reg & ~RegisterValue.RH_SPI_WRITE_MASK);
-        //dataSend[1] = (byte) 0x00;
-        Log.d(TAG, "Data READ send: " + Integer.toHexString(dataSend[0]));
+        dataSend[1] = (byte) 0;
+        //Log.d(TAG, "Data READ send: " + Integer.toHexString(dataSend[0]));
         mGpio.setValue(true);
-        device.transfer(dataSend,response,dataSend.length);
+        //device.transfer(dataSend,response,dataSend.length);
+        for(int i = 0; i < 1000; i++){}
+        device.read(response,response.length);
         mGpio.setValue(false);
         for (int i = 0; i < 2; i++)
             Log.d(TAG,"READ - Response byte " + i + " is: " + Integer.toHexString(response[i]));
@@ -265,13 +267,14 @@ public class MainActivity extends Activity {
         dataSend[0] = (byte) (reg | RegisterValue.RH_SPI_WRITE_MASK);
         dataSend[1] = data;
         Log.d(TAG, "Data WRITE send: " + Integer.toBinaryString(dataSend[0]));
-
         Log.d(TAG, "Data WRITE send: " + Integer.toBinaryString(dataSend[1]));
         mGpio.setValue(true);
-        device.transfer(dataSend,response,dataSend.length);
+        //device.transfer(dataSend,response,dataSend.length);
+        for(int i = 0; i < 1000; i++){}
+        device.write(dataSend,dataSend.length);
         mGpio.setValue(false);
-        for (int i = 0; i < 2; i++)
-            Log.d(TAG,"WRITE - Response byte " + i + " is: " + Integer.toString(response[i]));
+        //for (int i = 0; i < 2; i++)
+           // Log.d(TAG,"WRITE - Response byte " + i + " is: " + Integer.toString(response[i]));
     }
 
     private void setup() throws IOException {
