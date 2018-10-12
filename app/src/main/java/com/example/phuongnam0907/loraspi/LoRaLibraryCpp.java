@@ -1,6 +1,12 @@
 package com.example.phuongnam0907.loraspi;
 
+import android.os.Handler;
 import android.util.Log;
+
+import com.google.android.things.pio.Gpio;
+import com.google.android.things.pio.PeripheralManager;
+
+import java.io.IOException;
 
 public class LoRaLibraryCpp {
 
@@ -61,28 +67,78 @@ public class LoRaLibraryCpp {
     #include "WProgram.h"
     #endif
     */
-    private static final int LOW = 0;
-    private static final int HIGH = 1;
+
+    private static final boolean LOW = false;
+    private static final boolean HIGH = true;
     private static final boolean INPUT = false;
     private static final boolean OUTPUT = true;
-    int   m_SPI_CS_PIN; //15
-    int   m_SPI_MISO_PIN; //12
-    int   m_SPI_MOSI_PIN; //13
-    int   m_SPI_SCK_PIN;  //14
-    int   m_DIO0_PIN;   //16
-    int   m_ANT_EN_PIN;   //4
-    int   m_RESET_PIN;  //5
+    private Gpio  m_SPI_CS_PIN; //15
+    private Gpio  m_SPI_MISO_PIN; //12
+    private Gpio  m_SPI_MOSI_PIN; //13
+    private Gpio  m_SPI_SCK_PIN;  //14
+    private Gpio  m_DIO0_PIN;   //16
+    private Gpio  m_ANT_EN_PIN;   //4
+    private Gpio  m_RESET_PIN;  //5
+
     byte m_TXLength;   //32
     byte m_RXLength;   //32
     byte[] m_TXData = new byte[128];
     byte[] m_RXData = new byte[128];
 
-    private void digitalWrite(int name, int value){}
-    private int digitalRead(int name){
-        return 1;
+    private void digitalWrite(Gpio name, boolean value) {
+        try {
+            name.setValue(value);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    private void delay(int time){}
-    private void pinMode (int port, boolean bool){}
+
+    private int digitalRead(Gpio name){
+        int state = 0;
+        try {
+            if (name.getValue()) state = 1;
+            else state = 0;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return state;
+    }
+
+    PeripheralManager manager = PeripheralManager.getInstance();
+    private void regPin(Gpio pin, String namePin){
+        if (namePin.indexOf("BCM") < 0) namePin = "BCM" + namePin;
+        try {
+            pin = manager.openGpio(namePin);
+            Log.d(TAG,"Name: " + pin.getName());
+        } catch (IOException e) {
+            Log.e(TAG,"Cannot open the GPIO: " + namePin,e);
+        }
+    }
+
+    private void delay(int milliseconds){       //**CHECK AGAIN!!!**
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+            }
+        }, milliseconds);
+    }
+
+    private void pinMode (Gpio port, boolean bool){
+        if (bool == INPUT){
+            try {
+                port.setDirection(Gpio.DIRECTION_IN);
+                port.setActiveType(Gpio.ACTIVE_HIGH);//**CHECK AGAIN!!!**
+                // Register for all state changes
+                port.setEdgeTriggerType(Gpio.EDGE_BOTH);
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+        } else try {
+            port.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     /**********************************************************
      **Name:     SPICmd8bit
      **Function: SPI Write one byte
@@ -90,7 +146,7 @@ public class LoRaLibraryCpp {
      **Output:   none
      **note:     use for burst mode
      **********************************************************/
-    void SPICmd8bit(byte WrPara)
+    private void SPICmd8bit(byte WrPara)
     {
         byte bitcnt;
         for(bitcnt=8; bitcnt!=0; bitcnt--)
@@ -113,11 +169,10 @@ public class LoRaLibraryCpp {
      **Output:   result byte
      **Note:     use for burst mode
      **********************************************************/
-    byte SPIRead8bit()
+    private byte SPIRead8bit()
     {
-         byte RdPara = 0;
-         byte bitcnt;
-
+        byte RdPara = 0;
+        byte bitcnt;
         digitalWrite(m_SPI_CS_PIN,LOW);
         digitalWrite(m_SPI_MOSI_PIN,HIGH);                                                 //Read one byte data from FIFO, MOSI hold to High
         for(bitcnt=8; bitcnt!=0; bitcnt--)
@@ -126,9 +181,9 @@ public class LoRaLibraryCpp {
             RdPara <<= 1;
             digitalWrite(m_SPI_SCK_PIN,HIGH);
             if(digitalRead(m_SPI_MISO_PIN) == 1)
-                RdPara |= 0x01;
+               RdPara |= 0x01;
             else
-                RdPara |= 0x00;
+               RdPara |= 0x00;
         }
         digitalWrite(m_SPI_SCK_PIN,LOW);
         return (RdPara);
@@ -140,7 +195,7 @@ public class LoRaLibraryCpp {
      **Input:    adr -> address for read
      **Output:   None
      **********************************************************/
-     byte SPIRead(byte adr)
+    private byte SPIRead(byte adr)
     {
         byte tmp;
         digitalWrite(m_SPI_SCK_PIN,LOW);
@@ -158,7 +213,7 @@ public class LoRaLibraryCpp {
      **Input:     byte address &  byte data
      **Output:   None
      **********************************************************/
-    void SPIWrite( byte adr,  byte WrPara)
+    private void SPIWrite( byte adr,  byte WrPara)
     {
         digitalWrite(m_SPI_SCK_PIN,LOW);
         digitalWrite(m_SPI_CS_PIN,LOW);
@@ -175,7 +230,7 @@ public class LoRaLibraryCpp {
      **          length--how many bytes for read
      **Output:   None
      **********************************************************/
-    void SPIBurstRead( byte adr, byte[] ptr,  byte length)
+    private void SPIBurstRead( byte adr, byte[] ptr,  byte length)
     {
         byte i;
         if(length<=1)                                            //length must more than one
@@ -200,7 +255,7 @@ public class LoRaLibraryCpp {
      **          length--how many bytes for write
      **Output:   none
      **********************************************************/
-    void SPIBurstWrite( byte adr,  byte[] ptr,  byte length)
+    private void SPIBurstWrite( byte adr,  byte[] ptr,  byte length)
     {
          byte i;
         if(length<=1)                                            //length must more than one
@@ -218,16 +273,16 @@ public class LoRaLibraryCpp {
     }
 
     //===========================
-    void Initial(byte SPI_CS_PIN,byte SPI_MISO_PIN,byte SPI_MOSI_PIN,byte SPI_SCK_PIN,byte ANT_EN_PIN,byte RESET_PIN,byte DIO0_PIN)
+    public void Initial(String SPI_CS_PIN, String SPI_MISO_PIN, String SPI_MOSI_PIN, String SPI_SCK_PIN, String ANT_EN_PIN, String RESET_PIN, String DIO0_PIN)
     //===========================
     {
-        m_SPI_CS_PIN  = SPI_CS_PIN;
-        m_SPI_MISO_PIN  = SPI_MISO_PIN;
-        m_SPI_MOSI_PIN  = SPI_MOSI_PIN;
-        m_SPI_SCK_PIN  = SPI_SCK_PIN;
-        m_ANT_EN_PIN  = ANT_EN_PIN;
-        m_RESET_PIN   = RESET_PIN;
-        m_DIO0_PIN    = DIO0_PIN;
+        regPin(m_SPI_CS_PIN,SPI_CS_PIN);
+        regPin(m_SPI_MISO_PIN,SPI_MISO_PIN);
+        regPin(m_SPI_MOSI_PIN,SPI_MOSI_PIN);
+        regPin(m_SPI_SCK_PIN,SPI_SCK_PIN);
+        regPin(m_ANT_EN_PIN,ANT_EN_PIN);
+        regPin(m_RESET_PIN,RESET_PIN);
+        regPin(m_DIO0_PIN,DIO0_PIN);
         // initialize the pins
         pinMode(m_SPI_CS_PIN, OUTPUT);
         pinMode(m_SPI_MOSI_PIN, OUTPUT);
@@ -260,7 +315,7 @@ public class LoRaLibraryCpp {
         SPIWrite(REG_OPMODE,(byte) 0X09);                    //Standby
     }
     //===========================
-    void InitialSend(byte TX_Length)
+    public void InitialSend(byte TX_Length)
     //===========================
     {
          byte addr=0;
@@ -283,7 +338,7 @@ public class LoRaLibraryCpp {
         }
     }
     //===========================
-    void Send( byte buffer[])
+    public void Send( byte buffer[])
     //===========================
     {
          byte i;
@@ -305,7 +360,7 @@ public class LoRaLibraryCpp {
     }
 
     //===========================
-    void InitialReceive(byte RX_Length)
+    public void InitialReceive(byte RX_Length)
     //===========================
     {
          byte addr;
@@ -326,7 +381,7 @@ public class LoRaLibraryCpp {
         }
     }
     //===========================
-    byte Receive( long Duration)
+    private byte Receive( long Duration)
     //===========================
     {
         byte i,j=0,addr,packet_size;
@@ -377,7 +432,7 @@ public class LoRaLibraryCpp {
     }
 
     //===========================
-    void DebugLoRa()
+    public void DebugLoRa()
     //===========================
     {
         byte i,j;
