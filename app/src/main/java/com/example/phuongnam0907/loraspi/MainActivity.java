@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
 
     private void configSPIDevice(SpiDevice device) throws IOException {
         device.setMode(SpiDevice.MODE1);
-        device.setFrequency(32000000); //12MHz OR 32MHz
+        device.setFrequency(32000000); // 32MHz
         device.setBitJustification(SpiDevice.BIT_JUSTIFICATION_MSB_FIRST);
         device.setBitsPerWord(8);
         Log.d(TAG,"SPI OK now ....");
@@ -152,7 +152,7 @@ public class MainActivity extends Activity {
                 //sendConfig();
             }
         };
-        timer.schedule(timerTask,20000, 10000);
+        timer.schedule(timerTask,5000, 5000);
     }
 
 
@@ -278,6 +278,6 @@ public class MainActivity extends Activity {
     }
 
     private void setup() throws IOException {
-        spiWrite(mDevice, RegisterAddress.RH_RF95_REG_01_OP_MODE, RegisterValue.RH_RF95_MODE_RXCONTINUOUS);
+        spiWrite(mDevice, RegisterAddress.RH_RF95_REG_01_OP_MODE, RegisterValue.RH_RF95_MODE_SLEEP);
     }
 }
